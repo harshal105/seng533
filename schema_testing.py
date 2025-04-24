@@ -1,10 +1,15 @@
-from pymongo import MongoClient
-from schema import StringDataPerson
-from pymongo.mongo_client import MongoClient
-from bson import ObjectId
 import time
 import datetime
 import json
+from pymongo import MongoClient
+
+URI = "mongodb+srv://test:12345@cluster0.oj09f.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+BATCH_SIZE = 10000
+
+def get_collection():
+    client = MongoClient(URI)
+    db = client.final
+    return client, db.person
 
 simple_schema =  {
                 "id": "0",
@@ -88,11 +93,8 @@ complex_schema = {
                 }
             }
 
-def create():
-    URI = "mongodb+srv://test:12345@cluster0.oj09f.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
-    client = MongoClient(URI)
-    db = client.final
-    collection = db.person
+def create():  
+    client, collection = get_collection()
 
     try:
         client.admin.command("ping")
@@ -100,12 +102,10 @@ def create():
     except Exception as e:
         print(e)
 
-
-    batch_size = 10000  # Define the batch size
     batch = []  # This will store the documents to be inserted
 
     for _ in range(50):
-        for i in range(batch_size):  
+        for i in range(BATCH_SIZE):  
             person = {
                 "id": str(i),
                 "first_name": "John",
@@ -147,7 +147,7 @@ def create():
             }
             batch.append(person)
 
-        if len(batch) >= batch_size:
+        if len(batch) >= BATCH_SIZE:
             try:
                 start_time = time.time()
                 collection.insert_many(batch)
@@ -167,10 +167,7 @@ def create():
                 print(f"Error saving remaining documents: {e}")
 
 def delete_all():
-    URI = "mongodb+srv://test:12345@cluster0.oj09f.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
-    client = MongoClient(URI)
-    db = client.final
-    collection = db.person
+    client, collection = get_collection()
 
     try:
         client.admin.command("ping")
@@ -192,10 +189,7 @@ def delete_all():
         print(f"Error deleting documents: {e}")
 
 def update_field():
-    URI = "mongodb+srv://test:12345@cluster0.oj09f.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
-    client = MongoClient(URI)
-    db = client.final
-    collection = db.person
+    client, collection = get_collection()
 
     try:
         client.admin.command("ping")
@@ -225,10 +219,7 @@ def update_field():
 
 
 def read_documents():
-    URI = "mongodb+srv://test:12345@cluster0.oj09f.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
-    client = MongoClient(URI)
-    db = client.final
-    collection = db.person
+    client, collection = get_collection()
 
     try:
         client.admin.command("ping")
@@ -257,6 +248,12 @@ def read_documents():
     except Exception as e:
         print(f"Error reading documents: {e}")
 
+def main():
+    create()
+    read_documents()
+    update_field()
+    delete_all()
+
 
 if __name__ == "__main__":
-    delete_all()
+    main()

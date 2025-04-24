@@ -1,21 +1,17 @@
-
 import threading
 import time
 import datetime
 from pymongo import MongoClient
 
 URI = "mongodb+srv://test:12345@cluster0.oj09f.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
-
+BATCH_SIZE = 10000
 
 def get_collection():
     client = MongoClient(URI)
     db = client.final
     return client, db.person
 
-
 def create():
-    batch_size=100000
-    batches=1
     client, collection = get_collection()
     try:
         client.admin.command("ping")
@@ -24,9 +20,9 @@ def create():
         print(e)
         return
 
-    for b in range(batches):
+    for _ in range(10):
         batch = []
-        for i in range(batch_size):
+        for i in range(BATCH_SIZE):
             person = {
                 "id": str(i),
                 "first_name": "John",
@@ -61,8 +57,6 @@ def delete_documents(start_index, batch_size):
         return
 
     try:
-
-
         # Step 1: Get the _ids in the range
         docs = list(collection.find({}).skip(start_index).limit(batch_size))
         ids_to_delete = [doc['_id'] for doc in docs]
@@ -70,8 +64,9 @@ def delete_documents(start_index, batch_size):
         if not ids_to_delete:
             print(f"[{threading.current_thread().name}] No documents to delete.")
             return
-
-        # time.sleep(120)
+        
+        # Sleep here so we can check activity spikes on charts
+        time.sleep(120)
         # Step 2: Delete documents with those _ids
         start_time = time.time()
         print(f"[{threading.current_thread().name}] {datetime.datetime.now()}: Starting {start_time}")
@@ -100,7 +95,8 @@ def update_field(start_index, batch_size):
         # First, get the _ids of documents in the specified range
         docs = list(collection.find({}).skip(start_index).limit(batch_size))
         ids = [doc['_id'] for doc in docs]
-
+        
+        # Sleep here so we can check activity spikes on charts
         time.sleep(120)
 
         start_time = time.time()
@@ -143,10 +139,10 @@ def read_documents(start_index, batch_size):
 
 
 
-def run_with_threads(operation_func, num_threads):
+def run_with_threads_create(num_threads):
     threads = []
     for i in range(num_threads):
-        t = threading.Thread(target=operation_func, name=f"Thread-{i+1}")
+        t = threading.Thread(target=create, name=f"Thread-{i+1}")
         t.start()
         threads.append(t)
 
@@ -154,7 +150,7 @@ def run_with_threads(operation_func, num_threads):
         t.join()
 
 def run_with_threads_change(operation_func,num_threads):
-    total_docs = 100000
+    total_docs = BATCH_SIZE * 10
     num_threads = 2
     docs_per_thread = total_docs // num_threads
 
@@ -172,19 +168,18 @@ def run_with_threads_change(operation_func,num_threads):
     for t in threads:
         t.join()        
 
-
-if __name__ == "__main__":
-    # Choose number of threads: 1, 5, or 10
+def main():
+    # Choose number of threads: 1, 2, or 5
     num_threads = 2
 
-    # print("=== Delete All ===")
-    # run_with_threads_change(delete_documents, num_threads)
+    run_with_threads_change(delete_documents, num_threads)
 
-    # print("\n=== Create Documents ===") 
-    # run_with_threads(create, num_threads) 
+    run_with_threads_create(num_threads) 
 
-    print("\n=== Update Documents ===")
     run_with_threads_change(update_field, num_threads)
 
-    # print("\n=== Read Documents ===")
-    # run_with_threads_change(read_documents, num_threads)
+    run_with_threads_change(read_documents, num_threads)
+
+if __name__ == "__main__":
+    main()
+

@@ -20,7 +20,7 @@ The analysis is conducted using four Python scripts, each targeting one of the t
 
 ---
 
-## 🔧 Test Variables
+## Test Variables
 
 ### Workload Size
 Three data volumes are used to test scalability:
